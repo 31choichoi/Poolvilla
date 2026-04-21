@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addDays, isBefore, startOfDay, differenceInDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, Users, Calendar as CalendarIcon, CheckCircle2, Moon, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, Calendar as CalendarIcon, CheckCircle2, Moon, Home, User, Phone, MessageSquare } from "lucide-react";
 import { ROOMS_DATA } from "./RoomDetail.tsx";
+import { createReservation } from "../lib/firebase";
 
 interface ReservationPageProps {
   onBook: () => void;
@@ -18,6 +19,10 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
   const [selectedNights, setSelectedNights] = useState(1);
   const [selectedRoomId, setSelectedRoomId] = useState(ROOMS_DATA[0].id);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestMessage, setGuestMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [isSuccess, setIsSuccess] = useState(false);
 
   const selectedRoom = ROOMS_DATA.find(r => r.id === selectedRoomId) || ROOMS_DATA[0];
@@ -97,9 +102,27 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
     );
   };
 
-  const handleReservation = () => {
-    if (!selectedTime) return;
-    setIsSuccess(true);
+  const handleReservation = async () => {
+    if (!selectedTime || !guestName || !guestPhone) return;
+    setStatus("loading");
+    
+    try {
+      const reservationData = {
+        name: guestName,
+        phone: guestPhone,
+        date: `${format(selectedDate, "yyyy-MM-dd")} ~ ${format(checkOutDate, "MM-dd")} (${selectedNights}박, ${selectedTime})`,
+        room: selectedRoom.name,
+        message: guestMessage
+      };
+      
+      await createReservation(reservationData);
+      setIsSuccess(true);
+      setStatus("success");
+    } catch (error) {
+      console.error("Reservation failed:", error);
+      setStatus("error");
+      alert("예약 중 오류가 발생했습니다. 다시 시도해 주세요.");
+    }
   };
 
   return (
@@ -208,6 +231,48 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
                   ))}
                 </div>
 
+                {/* Guest Information */}
+                <div className="mt-12 space-y-6">
+                  <div className="flex items-center gap-3 mb-2 text-gray-400">
+                    <User className="w-5 h-5" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Guest Information</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Name</label>
+                      <input 
+                        type="text" 
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="성함"
+                        className="w-full px-4 py-4 bg-white border border-gray-100 rounded-xl focus:ring-2 ring-gray-900/10 transition-all outline-none text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Phone</label>
+                      <input 
+                        type="tel" 
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        placeholder="010-0000-0000"
+                        className="w-full px-4 py-4 bg-white border border-gray-100 rounded-xl focus:ring-2 ring-gray-900/10 transition-all outline-none text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Message (Optional)</label>
+                    <textarea 
+                      value={guestMessage}
+                      onChange={(e) => setGuestMessage(e.target.value)}
+                      placeholder="추가 요청 사항을 입력해 주세요."
+                      rows={2}
+                      className="w-full px-4 py-4 bg-white border border-gray-100 rounded-xl focus:ring-2 ring-gray-900/10 transition-all outline-none text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
                 {/* Selected Summary & Action */}
                 <div className="mt-auto pt-8 border-t border-gray-200">
                   <div className="flex items-center justify-between mb-8">
@@ -226,24 +291,17 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
                   </div>
 
                   <button
-                    disabled={!selectedTime || isSuccess}
+                    disabled={!selectedTime || !guestName || !guestPhone || status === "loading"}
                     onClick={handleReservation}
                     className={`
                       w-full py-5 rounded-2xl text-xs font-bold tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3
-                      ${selectedTime 
+                      ${selectedTime && guestName && guestPhone
                         ? "bg-gray-900 text-white hover:bg-black shadow-xl" 
                         : "bg-gray-200 text-gray-400 cursor-not-allowed"}
                     `}
                   >
-                    {isSuccess ? (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Reserved Successfully</span>
-                      </motion.div>
+                    {status === "loading" ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       "Confirm Reservation"
                     )}
@@ -291,6 +349,10 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
               onClick={() => {
                 setIsSuccess(false);
                 setSelectedTime(null);
+                setGuestName("");
+                setGuestPhone("");
+                setGuestMessage("");
+                setStatus("idle");
                 onBook();
               }}
               className="px-10 py-4 bg-gray-900 text-white text-xs font-bold tracking-[0.3em] uppercase rounded-xl hover:bg-black transition-all"
