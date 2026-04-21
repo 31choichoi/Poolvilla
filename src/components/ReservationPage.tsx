@@ -1,9 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addDays, isBefore, startOfDay, differenceInDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, Users, Calendar as CalendarIcon, CheckCircle2, Moon, Home, User, Phone, MessageSquare } from "lucide-react";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addDays, isBefore, startOfDay, differenceInDays, parseISO, isValid, isWithinInterval } from "date-fns";
+import { ChevronLeft, ChevronRight, Clock, Users, Calendar as CalendarIcon, CheckCircle2, Moon, Home, User, Phone, MessageSquare, AlertCircle } from "lucide-react";
 import { ROOMS_DATA } from "./RoomDetail.tsx";
-import { createReservation } from "../lib/firebase";
+import { createReservation, db } from "../lib/firebase";
+import { collection, query, onSnapshot } from "firebase/firestore";
+
+interface Reservation {
+  id: string;
+  name: string;
+  room: string;
+  date: string; // "yyyy-MM-dd ~ MM-dd (N박, HH:mm)"
+  status: 'pending' | 'confirmed' | 'cancelled';
+}
 
 interface ReservationPageProps {
   onBook: () => void;
@@ -24,6 +33,19 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
   const [guestMessage, setGuestMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [allReservations, setAllReservations] = useState<Reservation[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "reservations"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const res = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Reservation[];
+      setAllReservations(res);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const selectedRoom = ROOMS_DATA.find(r => r.id === selectedRoomId) || ROOMS_DATA[0];
   const checkOutDate = addDays(selectedDate, selectedNights);
@@ -63,6 +85,40 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
     );
   };
 
+  const isDateOccupied = (day: Date, roomId: string) => {
+    const room = ROOMS_DATA.find(r => r.id === roomId);
+    if (!room) return false;
+
+    return allReservations.some(res => {
+      if (res.status === 'cancelled') return false;
+      if (res.room !== room.name) return false;
+
+      try {
+        const startDateStr = res.date.split(' ~ ')[0];
+        const startDate = parseISO(startDateStr);
+        const nightsMatch = res.date.match(/\((\d+)박/);
+        const nights = nightsMatch ? parseInt(nightsMatch[1]) : 1;
+        
+        if (!isValid(startDate)) return false;
+
+        const endDate = addDays(startDate, nights - 1);
+        return isWithinInterval(startOfDay(day), { 
+          start: startOfDay(startDate), 
+          end: startOfDay(endDate) 
+        });
+      } catch (e) {
+        return false;
+      }
+    });
+  };
+
+  const isRangeOccupied = (start: Date, nights: number, roomId: string) => {
+    for (let i = 0; i < nights; i++) {
+      if (isDateOccupied(addDays(start, i), roomId)) return true;
+    }
+    return false;
+  };
+
   const renderCells = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
@@ -76,19 +132,23 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
           const isSelected = isSameDay(day, selectedDate);
           const isCurrentMonth = isSameMonth(day, monthStart);
           const isPast = isBefore(day, startOfDay(new Date()));
+          const isOccupied = isDateOccupied(day, selectedRoomId);
           
           return (
             <button
               key={idx}
-              disabled={isPast}
+              disabled={isPast || isOccupied}
               onClick={() => setSelectedDate(day)}
               className={`
-                relative aspect-square flex items-center justify-center text-sm rounded-lg transition-all
-                ${!isCurrentMonth ? "text-gray-300" : isPast ? "text-gray-200 cursor-not-allowed" : "text-gray-700 hover:bg-gray-50"}
+                relative aspect-square flex items-center justify-center text-xs sm:text-sm rounded-lg transition-all
+                ${!isCurrentMonth ? "text-gray-300" : isPast ? "text-gray-200 cursor-not-allowed" : isOccupied ? "text-red-200 cursor-not-allowed line-through" : "text-gray-700 hover:bg-gray-50"}
                 ${isSelected ? "bg-gray-900 text-white hover:bg-gray-800 shadow-lg scale-105 z-10" : ""}
               `}
             >
               {format(day, "d")}
+              {isOccupied && isCurrentMonth && (
+                <span className="absolute bottom-1 text-[8px] font-bold text-red-400 uppercase tracking-tighter scale-75">Full</span>
+              )}
               {isSelected && (
                 <motion.div 
                   layoutId="activeDay"
@@ -104,6 +164,13 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
 
   const handleReservation = async () => {
     if (!selectedTime || !guestName || !guestPhone) return;
+    
+    // Check for overlap one last time before submitting
+    if (isRangeOccupied(selectedDate, selectedNights, selectedRoomId)) {
+      alert("죄송합니다. 선택하신 기간에 이미 예약이 완료된 날짜가 포함되어 있습니다. 다른 날짜나 호실을 선택해 주세요.");
+      return;
+    }
+
     setStatus("loading");
     
     try {
@@ -275,6 +342,18 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
 
                 {/* Selected Summary & Action */}
                 <div className="mt-auto pt-8 border-t border-gray-200">
+                  {isRangeOccupied(selectedDate, selectedNights, selectedRoomId) && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-red-900 uppercase tracking-widest">Unavailable</p>
+                        <p className="text-[11px] text-red-600 leading-relaxed font-medium">
+                          선택하신 기간 중 이미 예약된 날짜가 포함되어 있습니다.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between mb-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Selected Summary</p>
@@ -291,11 +370,11 @@ export default function ReservationPage({ onBook }: ReservationPageProps) {
                   </div>
 
                   <button
-                    disabled={!selectedTime || !guestName || !guestPhone || status === "loading"}
+                    disabled={!selectedTime || !guestName || !guestPhone || status === "loading" || isRangeOccupied(selectedDate, selectedNights, selectedRoomId)}
                     onClick={handleReservation}
                     className={`
                       w-full py-5 rounded-2xl text-xs font-bold tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3
-                      ${selectedTime && guestName && guestPhone
+                      ${selectedTime && guestName && guestPhone && !isRangeOccupied(selectedDate, selectedNights, selectedRoomId)
                         ? "bg-gray-900 text-white hover:bg-black shadow-xl" 
                         : "bg-gray-200 text-gray-400 cursor-not-allowed"}
                     `}
