@@ -125,10 +125,10 @@ export default function App() {
               </div>
             ))}
             <button 
-              onClick={() => { setCurrentPage('reservation'); window.scrollTo({ top: 0 }); }}
+              onClick={() => setIsAdminDashboardOpen(true)}
               className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${isScrolled ? "bg-gray-900 text-white hover:bg-gray-800" : "bg-white text-gray-900 hover:bg-white/90"}`}
             >
-              Book Now
+              Admin
             </button>
           </div>
 
