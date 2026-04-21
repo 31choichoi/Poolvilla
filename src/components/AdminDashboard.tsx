@@ -8,7 +8,7 @@ import {
 import { 
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
   eachDayOfInterval, isSameMonth, isSameDay, isWithinInterval,
-  parseISO, isValid
+  parseISO, isValid, addDays, startOfDay
 } from "date-fns";
 import { 
   db
@@ -53,6 +53,14 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
     setIsAdmin(false);
     setLoginId("");
     setLoginPw("");
+  };
+
+  const ROOM_COLORS: Record<string, string> = {
+    "Room 101": "bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100",
+    "Room 102": "bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100",
+    "Room 201": "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100",
+    "Room 202": "bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100",
+    "VIP Suite": "bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100",
   };
 
   useEffect(() => {
@@ -137,10 +145,22 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
             {calendarDays.map((day, idx) => {
               const dayReservations = reservations.filter(res => {
                 try {
-                  // Try to extract the first date from the entry (which might be "2026-04-21 ~ 04-22 (1박, 15:00)")
-                  const dateStr = res.date.split(' ')[0];
-                  const resDate = parseISO(dateStr);
-                  return isValid(resDate) && isSameDay(day, resDate);
+                  const startDateStr = res.date.split(' ~ ')[0];
+                  const startDate = parseISO(startDateStr);
+                  
+                  const nightsMatch = res.date.match(/\((\d+)박/);
+                  const nights = nightsMatch ? parseInt(nightsMatch[1]) : 1;
+                  
+                  if (!isValid(startDate)) return false;
+                  
+                  // Show the reservation on the calendar for the number of nights
+                  // If it's a 3-night stay (e.g. 21, 22, 23), we show it on those 3 days.
+                  const displayEndDate = addDays(startDate, nights - 1);
+                  
+                  return isWithinInterval(startOfDay(day), { 
+                    start: startOfDay(startDate), 
+                    end: startOfDay(displayEndDate) 
+                  });
                 } catch (e) {
                   return false;
                 }
@@ -155,18 +175,28 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
                 >
                   <span className="text-[11px] font-medium ml-1 mb-1">{format(day, "d")}</span>
                   <div className="flex flex-col gap-1">
-                    {dayReservations.map(res => (
-                      <div 
-                        key={res.id} 
-                        className={`px-2 py-1 rounded text-[10px] font-bold truncate tracking-tight shadow-sm
-                          ${res.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
-                            res.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}
-                        `}
-                        title={`${res.room} - ${res.name}`}
-                      >
-                        {res.room.split(' ')[1] || res.room} - {res.name}
-                      </div>
-                    ))}
+                    {dayReservations.map(res => {
+                      const roomColorClass = ROOM_COLORS[res.room] || "bg-gray-100 text-gray-700 border-gray-200";
+                      const isCancelled = res.status === 'cancelled';
+
+                      return (
+                        <div 
+                          key={res.id} 
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold truncate tracking-tight shadow-sm border transition-all
+                            ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-60' : roomColorClass}
+                          `}
+                          title={`${res.room} - ${res.name} (${res.status})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-1 h-1 rounded-full ${
+                              res.status === 'confirmed' ? 'bg-green-500' : 
+                              res.status === 'cancelled' ? 'bg-red-500' : 'bg-amber-500'
+                            }`} />
+                            <span className="truncate">{res.room.split(' ').pop()} - {res.name}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

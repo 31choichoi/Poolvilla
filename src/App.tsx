@@ -5,7 +5,6 @@
 
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
-import ReservationModal from "./components/ReservationModal.tsx";
 import AdminDashboard from "./components/AdminDashboard.tsx";
 import ReservationPage from "./components/ReservationPage.tsx";
 import RoomDetail, { ROOMS_DATA, RoomInfo } from "./components/RoomDetail.tsx";
@@ -30,9 +29,9 @@ const HERO_IMAGES = [
 ];
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState<'home' | 'reservation'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isReservationOpen, setIsReservationOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<RoomInfo | null>(null);
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
@@ -83,7 +82,16 @@ export default function App() {
                 onMouseLeave={() => item === "ROOMS" && setIsRoomMenuOpen(false)}
               >
                 <a 
-                  href={item === "ROOMS" ? "#rooms" : `#${item.toLowerCase()}`}
+                  href={item === "ROOMS" ? "#rooms" : item === "RESERVATION" ? "#" : `#${item.toLowerCase()}`}
+                  onClick={(e) => {
+                    if (item === "RESERVATION") {
+                      e.preventDefault();
+                      setCurrentPage('reservation');
+                      window.scrollTo({ top: 0 });
+                    } else if (currentPage === 'reservation') {
+                      setCurrentPage('home');
+                    }
+                  }}
                   className={`text-sm font-medium tracking-wide transition-colors duration-300 hover:opacity-70 flex items-center gap-1 ${isScrolled ? "text-gray-700" : "text-white/90"}`}
                 >
                   {item}
@@ -117,7 +125,7 @@ export default function App() {
               </div>
             ))}
             <button 
-              onClick={() => setIsReservationOpen(true)}
+              onClick={() => { setCurrentPage('reservation'); window.scrollTo({ top: 0 }); }}
               className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${isScrolled ? "bg-gray-900 text-white hover:bg-gray-800" : "bg-white text-gray-900 hover:bg-white/90"}`}
             >
               Book Now
@@ -147,13 +155,23 @@ export default function App() {
             {NAV_ITEMS.map((item) => (
               <div key={item} className="flex flex-col">
                 <a 
-                  href={`#${item.toLowerCase()}`}
+                  href={item === "RESERVATION" ? "#" : `#${item.toLowerCase()}`}
                   className="text-gray-900 text-lg font-medium py-3 border-b border-gray-50 flex justify-between items-center"
-                  onClick={() => item !== "ROOMS" && setIsMenuOpen(false)}
+                  onClick={(e) => {
+                    if (item === "RESERVATION") {
+                      e.preventDefault();
+                      setCurrentPage('reservation');
+                      setIsMenuOpen(false);
+                      window.scrollTo({ top: 0 });
+                    } else {
+                      if (currentPage === 'reservation') setCurrentPage('home');
+                      if (item !== "ROOMS") setIsMenuOpen(false);
+                    }
+                  }}
                 >
                   {item}
                   {item === "ROOMS" && (
-                    <button onClick={(e) => { e.preventDefault(); setIsRoomMenuOpen(!isRoomMenuOpen); }}>
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsRoomMenuOpen(!isRoomMenuOpen); }}>
                       <ChevronDown className={`w-5 h-5 transition-transform ${isRoomMenuOpen ? "rotate-180" : ""}`} />
                     </button>
                   )}
@@ -177,8 +195,11 @@ export default function App() {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative h-[95vh] overflow-hidden">
+      {/* Page Content */}
+      {currentPage === 'home' ? (
+        <>
+          {/* Hero Section */}
+          <section className="relative h-[95vh] overflow-hidden">
         <motion.div 
           style={{ scale: heroScale }}
           className="absolute inset-0"
@@ -250,23 +271,6 @@ export default function App() {
           <p className="text-sm font-light text-gray-500 tracking-widest uppercase">로이스풀빌라 프롤로그</p>
         </div>
 
-        {/* Panorama Image */}
-        <div className="px-6 md:px-0 max-w-[1400px] mx-auto mb-24">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.5 }}
-            className="aspect-[21/9] rounded-xl overflow-hidden shadow-xl"
-          >
-            <img 
-              src="https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1920" 
-              alt="Panorama View"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </motion.div>
-        </div>
-
         {/* Description Section */}
         <div className="max-w-4xl mx-auto px-6 text-center mb-32">
           <span className="text-gray-400 text-sm uppercase tracking-widest mb-4 block">2024년 신축 오픈</span>
@@ -284,92 +288,6 @@ export default function App() {
             <p className="pt-4">사랑하는 반려견과의 소중한 추억을 남길 수 있도록</p>
             <p>로이스 애견 풀빌라는 항상 여러분의 편안한 휴식에 최선을 다하겠습니다.</p>
           </div>
-        </div>
-
-        {/* Feature Blocks */}
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 mb-32">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <h4 className="text-2xl font-light tracking-tight text-gray-800">Romantic Mood</h4>
-            <p className="text-sm text-gray-500 font-light">따뜻하고 아늑한 감성을 찾아줄 로이스 애견 풀빌라</p>
-            <div className="aspect-[4/3] rounded-lg overflow-hidden shadow-lg">
-              <img src="https://images.unsplash.com/photo-1520699049698-acd2fccb8cc8?auto=format&fit=crop&q=80&w=800" alt="Fire pit" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            </div>
-          </motion.div>
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            className="space-y-6 md:pt-12"
-          >
-            <h4 className="text-2xl font-light tracking-tight text-gray-800">European Interior</h4>
-            <p className="text-sm text-gray-500 font-light">산세를 바라보며 즐기는 핀란드식 사우나</p>
-            <div className="aspect-[4/3] rounded-lg overflow-hidden shadow-lg">
-              <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800" alt="Sauna" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Comfortable Rest */}
-        <div className="max-w-7xl mx-auto px-6 mb-32">
-          <div className="text-center mb-12">
-            <h4 className="text-2xl font-light tracking-tight text-gray-800 mb-4">Comfortable Rest</h4>
-            <p className="text-sm text-gray-500 font-light">로이스풀빌라는 오로지 여러분의 편안한 휴식에만 몰두합니다.</p>
-          </div>
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            className="aspect-[21/9] rounded-xl overflow-hidden shadow-xl"
-          >
-            <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1200" alt="Bedroom twins" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-          </motion.div>
-        </div>
-
-        {/* Final CTA */}
-        <div className="py-32 text-center bg-gray-50/50">
-          <span className="text-xs uppercase tracking-[0.4em] text-gray-400 mb-4 block">Happy Moment</span>
-          <h3 className="text-5xl font-light tracking-tight text-gray-900 mb-12">Lois Poolvilla</h3>
-          <p className="text-gray-500 font-light mb-12">아늑하고 행복한 여행을 위한 공간 '로이스 애견 풀빌라'</p>
-          <button 
-            onClick={() => setIsReservationOpen(true)}
-            className="inline-flex items-center gap-3 px-8 py-4 border border-gray-300 rounded-full hover:bg-white hover:shadow-lg transition-all duration-300 group"
-          >
-            <Calendar className="w-5 h-5 text-gray-400 group-hover:text-gray-900" />
-            <span className="text-sm font-medium tracking-widest uppercase">실시간 예약하기</span>
-          </button>
-        </div>
-      </section>
-
-      {/* Grid Gallery */}
-      <section className="pb-24 px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="group relative aspect-square overflow-hidden rounded-md bg-gray-100"
-            >
-              <img 
-                src={`https://picsum.photos/seed/ocean-${i}/800/800`} 
-                alt={`Gallery ${i}`}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                referrerPolicy="no-referrer"
-              />
-              {i === 5 && (
-                <div className="absolute inset-0 bg-black/60 flex flex-col justify-end p-6 text-white">
-                  <p className="text-xs leading-relaxed opacity-80 mb-2">
-                    You can check the attachment for a full view. <br />
-                    More shots with final designs coming soon.
-                  </p>
-                  <div className="w-12 h-[1px] bg-white/40" />
-                </div>
-              )}
-            </motion.div>
-          ))}
         </div>
       </section>
 
@@ -400,7 +318,7 @@ export default function App() {
               아늑한 쉼을 즐길 수 있습니다.
             </p>
             <button 
-              onClick={() => setIsReservationOpen(true)}
+              onClick={() => { setCurrentPage('reservation'); window.scrollTo({ top: 0 }); }}
               className="flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded hover:bg-white hover:text-gray-900 transition-all duration-300"
             >
               <Clock className="w-4 h-4" />
@@ -492,9 +410,12 @@ export default function App() {
           </div>
         </div>
       </section>
-
-      {/* Detailed Reservation Section */}
-      <ReservationPage onBook={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        </>
+      ) : (
+        <div className="pt-24 min-h-screen bg-white">
+          <ReservationPage onBook={() => setCurrentPage('home')} />
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-[#6B5A43] text-white/90 py-20 px-6">
@@ -518,7 +439,23 @@ export default function App() {
               <h4 className="text-xs font-bold uppercase tracking-widest">Navigation</h4>
               <ul className="space-y-3 text-[13px] font-light opacity-70">
                 {NAV_ITEMS.map(item => (
-                  <li key={item}><a href={`#${item.toLowerCase()}`} className="hover:text-white transition-colors">{item}</a></li>
+                  <li key={item}>
+                    <a 
+                      href={item === "RESERVATION" ? "#" : `#${item.toLowerCase()}`} 
+                      className="hover:text-white transition-colors text-left w-full"
+                      onClick={(e) => {
+                        if (item === "RESERVATION") {
+                          e.preventDefault();
+                          setCurrentPage('reservation');
+                          window.scrollTo({ top: 0 });
+                        } else if (currentPage === 'reservation') {
+                          setCurrentPage('home');
+                        }
+                      }}
+                    >
+                      {item}
+                    </a>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -533,11 +470,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-
-      <ReservationModal 
-        isOpen={isReservationOpen} 
-        onClose={() => setIsReservationOpen(false)} 
-      />
 
       <AdminDashboard 
         isOpen={isAdminDashboardOpen}
@@ -566,7 +498,8 @@ export default function App() {
             onClose={() => setSelectedRoom(null)} 
             onBook={() => {
               setSelectedRoom(null);
-              setIsReservationOpen(true);
+              setCurrentPage('reservation');
+              window.scrollTo({ top: 0 });
             }}
           />
         )}
