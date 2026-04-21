@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reservation Rules
+    match /reservations/{reservationId} {
+      function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { 
+        return isSignedIn() && 
+               (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
+                request.auth.token.email == '31choichoi@gmail.com'); 
+      }
+      
+      function isValidReservation(data) {
+        return data.keys().hasAll(['name', 'phone', 'date', 'room', 'status', 'createdAt']) &&
+               data.keys().size() >= 6 &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.phone is string && data.phone.size() > 0 && data.phone.size() <= 20 &&
+               data.date is string && data.date.size() == 10 &&
+               data.room is string && data.room.size() > 0 && data.room.size() <= 50 &&
+               data.status in ['pending', 'confirmed', 'cancelled'] &&
+               data.createdAt is timestamp;
+      }
+
+      // Allow creating a reservation (Public/Unauthenticated is OK for the booking form)
+      allow create: if isValidId(reservationId) && isValidReservation(request.resource.data) &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.createdAt == request.time;
+
+      // Only admins can list, get, update or delete reservations
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Admin list check
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+    }
+  }
+}

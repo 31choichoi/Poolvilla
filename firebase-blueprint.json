@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "Reservation": {
+      "title": "Reservation",
+      "description": "A booking request for the poolvilla",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Customer name" },
+        "phone": { "type": "string", "description": "Customer phone number" },
+        "date": { "type": "string", "description": "Booking date (YYYY-MM-DD)" },
+        "room": { "type": "string", "description": "Selected room name" },
+        "message": { "type": "string", "description": "Optional customer message" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"], "description": "Reservation status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" }
+      },
+      "required": ["name", "phone", "date", "room", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/reservations/{reservationId}": {
+      "schema": "Reservation",
+      "description": "Collection of all booking requests"
+    }
+  }
+}
