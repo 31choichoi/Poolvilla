@@ -56,12 +56,32 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (currentPage === 'home' && window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [currentPage]);
+
   return (
     <div className="relative min-h-screen">
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? "bg-white/90 backdrop-blur-md py-4 shadow-sm" : "bg-transparent py-6"}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <a href="#" className="flex items-center gap-2 group cursor-pointer" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <a 
+            href="#" 
+            className="flex items-center gap-2 group cursor-pointer" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              if (currentPage === 'reservation') setCurrentPage('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            }}
+          >
             <div className={`p-1.5 border rounded-lg transition-colors duration-500 ${isScrolled ? "border-gray-900" : "border-white"}`}>
               <Dog className={`w-5 h-5 transition-colors duration-500 ${isScrolled ? "text-gray-900" : "text-white"}`} />
             </div>
@@ -111,7 +131,10 @@ export default function App() {
                           {ROOMS_DATA.map((room) => (
                             <button 
                               key={room.id}
-                              onClick={() => setSelectedRoom(room)}
+                              onClick={() => {
+                                if (currentPage === 'reservation') setCurrentPage('home');
+                                setSelectedRoom(room);
+                              }}
                               className="w-full text-left px-5 py-2.5 text-[11px] font-bold text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-all uppercase tracking-widest"
                             >
                               {room.name}
@@ -181,7 +204,11 @@ export default function App() {
                     {ROOMS_DATA.map(room => (
                       <button 
                         key={room.id}
-                        onClick={() => { setSelectedRoom(room); setIsMenuOpen(false); }}
+                        onClick={() => { 
+                          if (currentPage === 'reservation') setCurrentPage('home');
+                          setSelectedRoom(room); 
+                          setIsMenuOpen(false); 
+                        }}
                         className="text-left py-3 text-sm text-gray-500 font-medium border-b border-gray-100 last:border-0"
                       >
                         {room.name} - {room.type}
