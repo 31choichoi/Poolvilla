@@ -154,7 +154,6 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
                   if (!isValid(startDate)) return false;
                   
                   // Show the reservation on the calendar for the number of nights
-                  // If it's a 3-night stay (e.g. 21, 22, 23), we show it on those 3 days.
                   const displayEndDate = addDays(startDate, nights - 1);
                   
                   return isWithinInterval(startOfDay(day), { 
@@ -164,6 +163,9 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
                 } catch (e) {
                   return false;
                 }
+              }).sort((a, b) => {
+                const roomOrder = ["Room 101", "Room 102", "Room 201", "Room 202", "VIP Suite"];
+                return roomOrder.indexOf(a.room) - roomOrder.indexOf(b.room);
               });
 
               return (
