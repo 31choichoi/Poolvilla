@@ -6,13 +6,10 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { 
-  auth, db, loginWithGoogle, logout 
+  db
 } from "../lib/firebase";
 import { 
-  onAuthStateChanged, User as FirebaseUser 
-} from "firebase/auth";
-import { 
-  collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc
+  collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc
 } from "firebase/firestore";
 
 interface Reservation {
@@ -27,30 +24,32 @@ interface Reservation {
 }
 
 export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loginId, setLoginId] = useState("");
+  const [loginPw, setLoginPw] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginId === "asdf" && loginPw === "7777") {
+      setIsAdmin(true);
+      setLoginError("");
+    } else {
+      setLoginError("아이디 또는 비밀번호가 올바르지 않습니다.");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAdmin(false);
+    setLoginId("");
+    setLoginPw("");
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        // Check if user is an admin in Firestore OR matches the predefined admin email
-        const adminDoc = await getDoc(doc(db, "admins", currentUser.uid));
-        const isHardcodedAdmin = currentUser.email === "31choichoi@gmail.com";
-        setIsAdmin(adminDoc.exists() || isHardcodedAdmin);
-        setLoading(false);
-      } else {
-        setIsAdmin(false);
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user && isAdmin) {
+    if (isAdmin) {
+      setLoading(true);
       const q = query(collection(db, "reservations"), orderBy("createdAt", "desc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const docs = snapshot.docs.map(doc => ({
@@ -58,10 +57,14 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
           ...doc.data()
         })) as Reservation[];
         setReservations(docs);
+        setLoading(false);
+      }, (error) => {
+        console.error("Firestore access error:", error);
+        setLoading(false);
       });
       return () => unsubscribe();
     }
-  }, [user, isAdmin]);
+  }, [isAdmin]);
 
   const handleStatusUpdate = async (id: string, status: 'confirmed' | 'cancelled') => {
     try {
@@ -110,11 +113,10 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {user && (
+            {isAdmin && (
               <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-gray-100 shadow-sm">
-                <img src={user.photoURL || ""} alt="" className="w-6 h-6 rounded-full" />
-                <span className="text-sm font-medium text-gray-700">{user.displayName}</span>
-                <button onClick={logout} className="p-1 hover:text-red-500 transition-colors">
+                <span className="text-sm font-medium text-gray-700">관리자님</span>
+                <button onClick={handleLogout} className="p-1 hover:text-red-500 transition-colors">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
@@ -131,35 +133,49 @@ export default function AdminDashboard({ isOpen, onClose }: { isOpen: boolean; o
             <div className="h-full flex items-center justify-center">
               <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
             </div>
-          ) : !user ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+          ) : !isAdmin ? (
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-6 max-w-sm mx-auto">
               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center">
                 <LogIn className="w-10 h-10 text-gray-300" />
               </div>
               <div>
                 <h3 className="text-xl font-medium text-gray-900 mb-2">관리자 로그인</h3>
-                <p className="text-sm text-gray-500 font-light max-w-sm mx-auto">
-                  관리자 계정으로 로그인하여 예약 내역을 확인해 주세요.
-                </p>
-              </div>
-              <button 
-                onClick={loginWithGoogle}
-                className="flex items-center gap-3 px-8 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-all"
-              >
-                Google 계정으로 로그인
-              </button>
-            </div>
-          ) : !isAdmin ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-              <XCircle className="w-16 h-16 text-red-100" />
-              <div>
-                <h3 className="text-xl font-medium text-gray-900 mb-2">접근 권한 없음</h3>
                 <p className="text-sm text-gray-500 font-light">
-                  해당 계정({user.email})은 관리자 권한이 없습니다. <br />
-                  관리자 등록을 위해 시스템 담당자에게 문의해 주세요.
+                  관리자 전용 아이디와 비밀번호를 입력해 주세요.
                 </p>
               </div>
-              <button onClick={logout} className="text-sm font-medium text-gray-900 underline underline-offset-4">로그아웃</button>
+              
+              <form onSubmit={handleLogin} className="w-full space-y-3">
+                <div className="space-y-1 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">ID</label>
+                  <input 
+                    type="text" 
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 ring-gray-900/10 focus:bg-white transition-all outline-none text-sm"
+                    placeholder="asdf"
+                    required
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Password</label>
+                  <input 
+                    type="password" 
+                    value={loginPw}
+                    onChange={(e) => setLoginPw(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 ring-gray-900/10 focus:bg-white transition-all outline-none text-sm"
+                    placeholder="****"
+                    required
+                  />
+                </div>
+                {loginError && <p className="text-xs text-red-500 font-medium">{loginError}</p>}
+                <button 
+                  type="submit"
+                  className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold text-xs tracking-[0.3em] uppercase hover:bg-black transition-all shadow-lg shadow-gray-200"
+                >
+                  Login Admin
+                </button>
+              </form>
             </div>
           ) : (
             <div className="space-y-6">
