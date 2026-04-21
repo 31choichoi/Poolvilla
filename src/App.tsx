@@ -7,6 +7,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
 import ReservationModal from "./components/ReservationModal.tsx";
 import AdminDashboard from "./components/AdminDashboard.tsx";
+import ReservationPage from "./components/ReservationPage.tsx";
 import RoomDetail, { ROOMS_DATA, RoomInfo } from "./components/RoomDetail.tsx";
 import { 
   ChevronLeft, 
@@ -18,7 +19,8 @@ import {
   Clock,
   Calendar,
   Dog,
-  ChevronDown
+  ChevronDown,
+  ArrowUp
 } from "lucide-react";
 
 const NAV_ITEMS = ["PROLOGUE", "LOCATION", "SPECIAL", "ROOMS", "RESERVATION"];
@@ -203,7 +205,7 @@ export default function App() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.1 }}
-            className="text-4xl md:text-6xl font-light tracking-tighter mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] uppercase"
+            className="text-2xl md:text-4xl font-light tracking-tighter mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] uppercase"
           >
             Lois Poolvilla
           </motion.h1>
@@ -215,7 +217,7 @@ export default function App() {
           >
             "편안하고 아늑한 로이스풀빌라"에 오신 것을 환영합니다.
           </motion.p>
-
+          
           <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden md:block">
             <button onClick={() => setCurrentHeroIndex(prev => (prev - 1 + HERO_IMAGES.length) % HERO_IMAGES.length)} className="p-2 border border-white/30 rounded-full hover:bg-white/10 transition-colors">
               <ChevronLeft className="w-6 h-6" />
@@ -244,7 +246,6 @@ export default function App() {
       <section id="prologue" className="bg-white">
         {/* Welcome Text Header */}
         <div className="py-20 text-center border-b border-gray-100 mb-12">
-          <h2 className="text-4xl md:text-5xl font-light tracking-[0.2em] text-gray-800 mb-6 uppercase">Welcome</h2>
           <div className="w-12 h-px bg-gray-300 mx-auto mb-6" />
           <p className="text-sm font-light text-gray-500 tracking-widest uppercase">로이스풀빌라 프롤로그</p>
         </div>
@@ -268,7 +269,7 @@ export default function App() {
 
         {/* Description Section */}
         <div className="max-w-4xl mx-auto px-6 text-center mb-32">
-          <span className="text-gray-400 text-sm uppercase tracking-widest mb-4 block">2024년 3월 신축 오픈</span>
+          <span className="text-gray-400 text-sm uppercase tracking-widest mb-4 block">2024년 신축 오픈</span>
           <h3 className="text-4xl font-light tracking-tight text-gray-900 mb-12">Lois Poolvilla</h3>
           
           <div className="space-y-6 text-gray-500 font-light leading-relaxed">
@@ -331,7 +332,10 @@ export default function App() {
           <span className="text-xs uppercase tracking-[0.4em] text-gray-400 mb-4 block">Happy Moment</span>
           <h3 className="text-5xl font-light tracking-tight text-gray-900 mb-12">Lois Poolvilla</h3>
           <p className="text-gray-500 font-light mb-12">아늑하고 행복한 여행을 위한 공간 '로이스 애견 풀빌라'</p>
-          <button className="inline-flex items-center gap-3 px-8 py-4 border border-gray-300 rounded-full hover:bg-white hover:shadow-lg transition-all duration-300 group">
+          <button 
+            onClick={() => setIsReservationOpen(true)}
+            className="inline-flex items-center gap-3 px-8 py-4 border border-gray-300 rounded-full hover:bg-white hover:shadow-lg transition-all duration-300 group"
+          >
             <Calendar className="w-5 h-5 text-gray-400 group-hover:text-gray-900" />
             <span className="text-sm font-medium tracking-widest uppercase">실시간 예약하기</span>
           </button>
@@ -395,7 +399,10 @@ export default function App() {
               로이스 풀빌라는 독채로 구성되어 있어 <br />
               아늑한 쉼을 즐길 수 있습니다.
             </p>
-            <button className="flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded hover:bg-white hover:text-gray-900 transition-all duration-300">
+            <button 
+              onClick={() => setIsReservationOpen(true)}
+              className="flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded hover:bg-white hover:text-gray-900 transition-all duration-300"
+            >
               <Clock className="w-4 h-4" />
               <span className="text-xs uppercase tracking-widest">실시간 예약하기</span>
             </button>
@@ -486,30 +493,8 @@ export default function App() {
         </div>
       </section>
 
-      {/* Reservation Section */}
-      <section id="reservation" className="py-24 bg-white text-center">
-        <div className="max-w-xl mx-auto px-6">
-          <h2 className="text-3xl font-light tracking-tight text-gray-900 mb-8">RESERVATION</h2>
-          <p className="text-gray-500 font-light leading-relaxed mb-12">
-            로이스 풀빌라의 특별한 휴식을 예약하세요. <br />
-            실시간 예약 현황을 통해 원하시는 날짜를 선택하실 수 있습니다.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <div className="flex-1 p-6 border border-gray-100 rounded-xl flex flex-col items-center">
-              <Phone className="w-6 h-6 mb-4 text-gray-400" />
-              <span className="text-xs uppercase tracking-widest mb-1">Call Us</span>
-              <span className="text-lg font-medium">010-1234-5678</span>
-            </div>
-            <button 
-              onClick={() => setIsReservationOpen(true)}
-              className="flex-[2] bg-gray-900 text-white rounded-xl py-6 px-10 hover:bg-black transition-all flex items-center justify-center gap-4"
-            >
-              <Clock className="w-5 h-5" />
-              <span className="font-medium tracking-[0.2em] uppercase">실시간 예약하기</span>
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* Detailed Reservation Section */}
+      <ReservationPage onBook={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
 
       {/* Footer */}
       <footer className="bg-[#6B5A43] text-white/90 py-20 px-6">
@@ -520,11 +505,11 @@ export default function App() {
               <span className="text-2xl font-bold tracking-tight">Lois Poolvilla</span>
             </div>
             <div className="space-y-2 text-[13px] font-light leading-relaxed opacity-80">
-              <p>대표자 : 공가현</p>
-              <p>TEL : 010-2565-3202</p>
+              <p>대표자 : 홍길동</p>
+              <p>TEL : 010-0000-0000</p>
               <p>ADD : 인천 옹진군 영흥면 선재리 545-6</p>
-              <p>사업자등록번호 : 468-06-03414</p>
-              <p>계좌번호 : 국민은행 608437-04-006781 (예금주 : 공가현)</p>
+              <p>사업자등록번호 : 000-00-00000</p>
+              <p>계좌번호 : 00은행 000-00-000000 (예금주 : 홍길동)</p>
             </div>
           </div>
 
@@ -558,6 +543,21 @@ export default function App() {
         isOpen={isAdminDashboardOpen}
         onClose={() => setIsAdminDashboardOpen(false)}
       />
+
+      {/* Scroll to Top Button */}
+      <AnimatePresence>
+        {isScrolled && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="fixed bottom-8 right-8 z-[100] p-4 bg-white/80 backdrop-blur-md border border-gray-100 rounded-full shadow-2xl text-gray-900 transition-all hover:bg-gray-900 hover:text-white"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedRoom && (

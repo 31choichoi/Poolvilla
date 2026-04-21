@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Maximize2, Users, Square, Bed, Wind, ArrowLeft, Calendar } from "lucide-react";
+import { X, Maximize2, Users, Square, Bed, Wind, ArrowLeft, Calendar, Clock, ArrowUp } from "lucide-react";
 
 export interface RoomInfo {
   id: string;
@@ -105,144 +105,200 @@ interface RoomDetailProps {
 }
 
 export default function RoomDetail({ room, onClose, onBook }: RoomDetailProps) {
+  const [showTopBtn, setShowTopBtn] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      setShowTopBtn(scrollContainerRef.current.scrollTop > 300);
+    }
+  };
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <motion.div 
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[150] bg-white overflow-y-auto"
     >
-      {/* Navigation Bar */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <button 
-            onClick={onClose}
-            className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>BACK</span>
-          </button>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-gray-400">{room.type}</span>
-            <h2 className="text-xl font-light tracking-widest uppercase">{room.name}</h2>
-          </div>
-          <button 
-            onClick={onBook}
-            className="px-6 py-2 bg-gray-900 text-white text-xs font-bold tracking-widest uppercase rounded-full hover:bg-black transition-all"
-          >
-            RESERVE NOW
-          </button>
-        </div>
-      </div>
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-[160] px-6 py-8 flex justify-between items-center mix-blend-difference text-white">
+        <button 
+          onClick={onClose}
+          className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] hover:opacity-50 transition-opacity"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>CLOSE</span>
+        </button>
+        <button 
+          onClick={onBook}
+          className="text-xs font-bold tracking-[0.2em] border-b border-white pb-1 hover:opacity-50 transition-opacity"
+        >
+          BOOK NOW
+        </button>
+      </nav>
 
-      {/* Main Images */}
-      <div className="space-y-4 p-4 md:p-6 lg:p-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+      {/* Hero Section */}
+      <section className="relative h-[90vh] overflow-hidden bg-gray-100 flex items-end">
+        <motion.img 
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          src={room.images[0]} 
+          alt={room.name} 
+          className="absolute inset-0 w-full h-full object-cover" 
+          referrerPolicy="no-referrer" 
+        />
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative w-full max-w-7xl mx-auto px-6 py-20 text-white">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="aspect-[4/3] rounded-2xl overflow-hidden shadow-sm"
+            transition={{ delay: 0.5, duration: 1 }}
           >
-            <img src={room.images[0]} alt={room.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <span className="text-xs uppercase tracking-[0.5em] font-bold opacity-70 mb-4 block">{room.type}</span>
+            <h1 className="text-6xl md:text-8xl font-light tracking-tighter uppercase mb-6">{room.name}</h1>
           </motion.div>
-          <div className="grid grid-rows-2 gap-4 md:gap-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-2xl overflow-hidden shadow-sm"
-            >
-              <img src={room.images[1]} alt={room.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-2xl overflow-hidden shadow-sm"
-            >
-              <img src={room.images[2]} alt={room.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            </motion.div>
-          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Details Section */}
-      <div className="max-w-7xl mx-auto px-6 py-20 pb-32">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-20">
-          <div className="lg:col-span-2 space-y-12">
-            <div className="space-y-6">
-              <h3 className="text-3xl font-light tracking-tight text-gray-900">{room.name} Overview</h3>
-              <p className="text-lg text-gray-500 font-light leading-relaxed">
-                {room.description}
-              </p>
-            </div>
+      {/* Content Section */}
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto px-6 py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
+            {/* Left: Summary */}
+            <div className="lg:col-span-8 space-y-20">
+              <div className="space-y-8">
+                <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">The Space</h3>
+                <p className="text-2xl md:text-3xl font-light leading-snug text-gray-900 max-w-2xl">
+                  {room.description}
+                </p>
+              </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-y border-gray-100">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest flex items-center gap-2"><Square className="w-3 h-3"/> Size</span>
-                <p className="text-sm font-medium">{room.size}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest flex items-center gap-2"><Users className="w-3 h-3"/> Capacity</span>
-                <p className="text-sm font-medium">{room.capacity}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest flex items-center gap-2"><Bed className="w-3 h-3"/> Beds</span>
-                <p className="text-sm font-medium">{room.bedType}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest flex items-center gap-2"><Maximize2 className="w-3 h-3"/> Check-In/Out</span>
-                <p className="text-sm font-medium">15:00 / 11:00</p>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <h4 className="text-xl font-light tracking-tight text-gray-900">Room Features</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6">
-                {room.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <Wind className="w-4 h-4 text-gray-300" />
-                    <span className="text-sm text-gray-600 font-light">{feature}</span>
+              {/* Specs Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-12 gap-x-8 border-t border-gray-100 pt-16">
+                {[
+                  { label: "Size", value: room.size, icon: Square },
+                  { label: "Capacity", value: room.capacity, icon: Users },
+                  { label: "Beds", value: room.bedType, icon: Bed },
+                  { label: "Check In", value: "15:00", icon: Clock },
+                ].map((spec, i) => (
+                  <div key={i} className="space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest flex items-center gap-2">
+                      <spec.icon className="w-3 h-3" /> {spec.label}
+                    </span>
+                    <p className="text-sm font-medium text-gray-900">{spec.value}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
 
-          <div className="space-y-8">
-            <div className="p-8 bg-gray-50 rounded-2xl space-y-6">
-              <div className="space-y-1">
-                <span className="text-xs text-gray-400 font-light">Starting from</span>
-                <p className="text-3xl font-light text-gray-900">{room.price}</p>
-              </div>
-              <div className="h-px bg-gray-200" />
-              <div className="space-y-4">
-                <p className="text-sm text-gray-500 font-light leading-relaxed">
-                  * 시즌에 따라 가격이 변동될 수 있습니다. <br />
-                  * 실시간 예약창에서 정확한 가격을 확인해 주세요.
-                </p>
-                <button 
-                  onClick={onBook}
-                  className="w-full py-4 bg-gray-900 text-white text-xs font-bold tracking-widest uppercase rounded-xl hover:bg-black transition-all flex items-center justify-center gap-3"
+              {/* Secondary Images - Balanced Pair */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8 }}
+                  viewport={{ once: true }}
+                  className="aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden"
                 >
-                  <Calendar className="w-4 h-4" />
-                  <span>예약 가능 여부 확인</span>
-                </button>
+                  <img src={room.images[1]} alt={room.name} className="w-full h-full object-cover" />
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  viewport={{ once: true }}
+                  className="aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden md:mt-20"
+                >
+                  <img src={room.images[2]} alt={room.name} className="w-full h-full object-cover" />
+                </motion.div>
+              </div>
+
+              {/* Features */}
+              <div className="space-y-10 border-t border-gray-100 pt-20">
+                <h4 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Amenities & Features</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
+                  {room.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-4">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-900" />
+                      <span className="text-sm text-gray-600 font-light">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            
-            <div className="p-8 border border-gray-100 rounded-2xl">
-              <h5 className="text-sm font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Notification</h5>
-              <ul className="space-y-3 text-xs text-gray-400 font-light leading-relaxed list-disc pl-4">
-                <li>입실시간 15:00 / 퇴실시간 11:00</li>
-                <li>반려견 동반 시 사전 문의 필수</li>
-                <li>객실 내 육류/생선 조리 금지</li>
-                <li>전 객실 금연 구역입니다.</li>
-              </ul>
+
+            {/* Right: Booking Sidebar */}
+            <div className="lg:col-span-4 lg:sticky lg:top-32 h-fit space-y-8">
+              <div className="p-10 bg-gray-50 rounded-3xl space-y-8 text-center lg:text-left">
+                <div className="space-y-2">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Pricing From</span>
+                  <p className="text-4xl font-light text-gray-900">{room.price}</p>
+                </div>
+                <div className="space-y-6">
+                  <button 
+                    onClick={onBook}
+                    className="w-full py-5 bg-gray-900 text-white text-[11px] font-bold tracking-[0.2em] uppercase rounded-xl hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-gray-200"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>예약 가능 여부 확인</span>
+                  </button>
+                  <p className="text-[11px] text-gray-400 font-light leading-relaxed text-center px-4">
+                    * 시즌 및 요일에 따라 가격은 변동될 수 있으며, <br />실시간 예약 창에서 정확한 견적을 확인하실 수 있습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-10 border border-gray-100 rounded-3xl space-y-6">
+                <h5 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-900 border-b border-gray-100 pb-4">Essential Info</h5>
+                <ul className="space-y-4 text-xs text-gray-400 font-light leading-relaxed">
+                  <li className="flex justify-between"><span>Check-In</span> <span className="text-gray-900 font-medium">15:00</span></li>
+                  <li className="flex justify-between"><span>Check-Out</span> <span className="text-gray-900 font-medium">11:00</span></li>
+                  <li className="flex flex-col gap-2 pt-4">
+                    <span className="uppercase text-[9px] font-bold tracking-widest">Notice</span>
+                    <p className="pl-3 border-l border-gray-200">반려견 동반 시 사전 문의 부탁드립니다. 실내 정숙 및 금연 원칙을 준수해 주세요.</p>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Final Bottom Bar for mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex items-center justify-between z-[170]">
+        <div>
+          <span className="text-[9px] uppercase font-bold text-gray-400">{room.name}</span>
+          <p className="text-sm font-bold text-gray-900">{room.price}</p>
+        </div>
+        <button 
+          onClick={onBook}
+          className="px-6 py-3 bg-gray-900 text-white text-[10px] font-bold tracking-widest uppercase rounded-lg"
+        >
+          RESERVE
+        </button>
+      </div>
+
+      {/* Internal Scroll to Top for Detail View */}
+      <AnimatePresence>
+        {showTopBtn && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            onClick={scrollToTop}
+            className="fixed bottom-20 md:bottom-8 right-8 z-[170] p-4 bg-white/80 backdrop-blur-md border border-gray-100 rounded-full shadow-2xl text-gray-900 transition-all hover:bg-gray-900 hover:text-white"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
